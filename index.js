@@ -15,23 +15,6 @@ const cron = require("node-cron");
 
 const midtransClient = require("midtrans-client");
 
-cron.schedule("*/15 * * * *", async () => {
-  try {
-    const currentTime = new Date();
-    const timeThreshold = new Date(currentTime - 45 * 60 * 1000);
-
-    
-    await db.query("DELETE FROM orders WHERE date < ? AND time < ?", [
-      timeThreshold.toISOString().split("T")[0],
-      timeThreshold.toISOString().split("T")[1],
-    ]);
-
-    console.log("Penghapusan pesanan otomatis berhasil.");
-  } catch (error) {
-    console.error("Terjadi kesalahan saat menghapus pesanan:", error);
-  }
-});
-
 
 
 app.get("/orders", (req, res) => {

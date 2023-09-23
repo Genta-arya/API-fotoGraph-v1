@@ -199,7 +199,7 @@ app.get("/order-status/:order_id", (req, res) => {
 app.post("/midtrans-callback", (req, res) => {
   const { order_id, transaction_status, fraud_status } = req.body;
 
-  let status = "";
+  let status = "pending";
 
   switch (transaction_status) {
     case "capture":

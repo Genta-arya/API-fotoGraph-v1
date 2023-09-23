@@ -174,6 +174,57 @@ app.post("/order", async (req, res) => {
   });
 });
 
+
+
+app.post("/midtrans-callback", (req, res) => {
+  const { order_id, transaction_status, fraud_status } = req.body;
+
+  // Define the status based on transaction_status
+  let status = "";
+
+  switch (transaction_status) {
+    case "capture":
+      status = "captured";
+      break;
+    case "settlement":
+      status = "settled";
+      break;
+    case "pending":
+      status = "pending";
+      break;
+    case "cancel":
+      status = "canceled";
+      break;
+    case "expire":
+      status = "expired";
+      break;
+    default:
+      // Handle other cases or unknown statuses
+      console.log(`Unknown transaction status for order ${order_id}: ${transaction_status}`);
+      break;
+  }
+
+  // Now, update the status in your database
+  if (status) {
+    const updateStatusQuery = "UPDATE orders SET status = ? WHERE order_id = ?";
+    const values = [status, order_id];
+
+    db.query(updateStatusQuery, values, (error, results) => {
+      if (error) {
+        console.error(`Error updating status for order ${order_id}:`, error);
+        res.status(500).json({ error: `Error updating status for order ${order_id}` });
+      } else {
+        console.log(`Status updated for order ${order_id} to: ${status}`);
+        res.sendStatus(200); // Send a response to Midtrans to acknowledge receipt of the callback
+      }
+    });
+  } else {
+    // Handle cases where status is not defined or unknown
+    res.sendStatus(200); // Send a response to Midtrans to acknowledge receipt of the callback
+  }
+});
+
+
 app.listen(port,() => {
   console.log(`Server berjalan `);
 });

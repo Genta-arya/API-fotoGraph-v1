@@ -10,12 +10,9 @@ const path = require("path");
 app.use(cors());
 app.use(bodyParser.json());
 
-
 const cron = require("node-cron");
 
 const midtransClient = require("midtrans-client");
-
-
 
 app.get("/orders", (req, res) => {
   const getUsersQuery = "SELECT * FROM orders";
@@ -164,7 +161,7 @@ app.post("/order", async (req, res) => {
         }
         console.log("Order placed successfully:", results);
 
-        res.status(200).json({ redirectUrl });
+        res.status(200).json({ order_id: transactionDetails.order_id, redirectUrl });
       });
     } catch (error) {
       console.error("Failed to create transaction:", error);
@@ -175,11 +172,36 @@ app.post("/order", async (req, res) => {
 });
 
 
+// Add this new endpoint to your Express app
+app.get("/order-status/:order_id", (req, res) => {
+  const { order_id } = req.params;
+
+ 
+  const getOrderStatusQuery = "SELECT status FROM orders WHERE order_id = ?";
+  const values = [order_id];
+
+  db.query(getOrderStatusQuery, values, (error, results) => {
+    if (error) {
+      console.error("Error querying order status:", error);
+      return res.status(500).json({ error: "Error querying order status" });
+    }
+
+    if (results.length === 0) {
+      console.log("Order not found");
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const orderStatus = results[0].status;
+
+   
+    res.status(200).json({ order_id, status: orderStatus });
+  });
+});
+
 
 app.post("/midtrans-callback", (req, res) => {
   const { order_id, transaction_status, fraud_status } = req.body;
 
-  // Define the status based on transaction_status
   let status = "";
 
   switch (transaction_status) {
@@ -199,12 +221,13 @@ app.post("/midtrans-callback", (req, res) => {
       status = "expired";
       break;
     default:
-      // Handle other cases or unknown statuses
-      console.log(`Unknown transaction status for order ${order_id}: ${transaction_status}`);
+      console.log(
+        `Unknown transaction status for order ${order_id}: ${transaction_status}`
+      );
       break;
   }
 
-  // Now, update the status in your database
+  
   if (status) {
     const updateStatusQuery = "UPDATE orders SET status = ? WHERE order_id = ?";
     const values = [status, order_id];
@@ -212,19 +235,19 @@ app.post("/midtrans-callback", (req, res) => {
     db.query(updateStatusQuery, values, (error, results) => {
       if (error) {
         console.error(`Error updating status for order ${order_id}:`, error);
-        res.status(500).json({ error: `Error updating status for order ${order_id}` });
+        res
+          .status(500)
+          .json({ error: `Error updating status for order ${order_id}` });
       } else {
         console.log(`Status updated for order ${order_id} to: ${status}`);
-        res.sendStatus(200); // Send a response to Midtrans to acknowledge receipt of the callback
+        res.sendStatus(200); 
       }
     });
   } else {
-    // Handle cases where status is not defined or unknown
-    res.sendStatus(200); // Send a response to Midtrans to acknowledge receipt of the callback
+    res.sendStatus(200);
   }
 });
 
-
-app.listen(port,() => {
+app.listen(port, () => {
   console.log(`Server berjalan `);
 });

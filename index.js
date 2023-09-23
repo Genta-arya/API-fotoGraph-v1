@@ -161,7 +161,9 @@ app.post("/order", async (req, res) => {
         }
         console.log("Order placed successfully:", results);
 
-        res.status(200).json({ order_id: transactionDetails.order_id, redirectUrl });
+        res
+          .status(200)
+          .json({ order_id: transactionDetails.order_id, redirectUrl });
       });
     } catch (error) {
       console.error("Failed to create transaction:", error);
@@ -171,13 +173,10 @@ app.post("/order", async (req, res) => {
   });
 });
 
-
-// Add this new endpoint to your Express app
 app.get("/order-status/:order_id", (req, res) => {
   const { order_id } = req.params;
 
- 
-  const getOrderStatusQuery = "SELECT status FROM orders WHERE order_id = ?";
+  const getOrderStatusQuery = "SELECT * FROM orders WHERE order_id = ?";
   const values = [order_id];
 
   db.query(getOrderStatusQuery, values, (error, results) => {
@@ -193,11 +192,9 @@ app.get("/order-status/:order_id", (req, res) => {
 
     const orderStatus = results[0].status;
 
-   
     res.status(200).json({ order_id, status: orderStatus });
   });
 });
-
 
 app.post("/midtrans-callback", (req, res) => {
   const { order_id, transaction_status, fraud_status } = req.body;
@@ -227,7 +224,6 @@ app.post("/midtrans-callback", (req, res) => {
       break;
   }
 
-  
   if (status) {
     const updateStatusQuery = "UPDATE orders SET status = ? WHERE order_id = ?";
     const values = [status, order_id];
@@ -240,7 +236,7 @@ app.post("/midtrans-callback", (req, res) => {
           .json({ error: `Error updating status for order ${order_id}` });
       } else {
         console.log(`Status updated for order ${order_id} to: ${status}`);
-        res.sendStatus(200); 
+        res.sendStatus(200);
       }
     });
   } else {

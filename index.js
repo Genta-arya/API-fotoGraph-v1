@@ -4,15 +4,23 @@ const bodyParser = require("body-parser");
 const app = express();
 const port = 3005;
 const cors = require("cors");
-
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const multer = require("multer");
 const path = require("path");
+const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-
-const cron = require("node-cron");
-
 const midtransClient = require("midtrans-client");
+
+function generateUID() {
+  const timestamp = new Date().getTime().toString();
+  const randomString = Math.random().toString(36).substring(2, 6);
+  const uid = timestamp + randomString;
+  return uid;
+}
 
 app.get("/orders", (req, res) => {
   const getUsersQuery = "SELECT * FROM orders";
@@ -25,6 +33,8 @@ app.get("/orders", (req, res) => {
     }
   });
 });
+
+
 
 app.post("/order", async (req, res) => {
   const {
@@ -242,6 +252,228 @@ app.post("/midtrans-callback", (req, res) => {
   } else {
     res.sendStatus(200);
   }
+});
+
+// Endpoint untuk login
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+
+  console.log(`Email: ${email}, Password: ${password}`);
+
+  const getUserQuery = "SELECT * FROM auth WHERE email = ?";
+  db.query(getUserQuery, [email], (error, results) => {
+    if (error) {
+      console.error(error);
+      res.sendStatus(500);
+    } else {
+      if (results.length === 0) {
+        res.status(401).json({ message: "Email atau password salah" });
+      } else {
+        const user = results[0];
+        if (password === user.password) {
+          const token = jwt.sign(
+            { userId: user.uid, email: user.email },
+            "rahasia-kunci-jwt",
+            { expiresIn: "1h" }
+          );
+
+          const insertTokenQuery =
+            "UPDATE auth SET token_jwt = ? WHERE uid = ?";
+          db.query(
+            insertTokenQuery,
+            [token, user.uid],
+            (insertError, insertResults) => {
+              if (insertError) {
+                console.error(insertError);
+                res.sendStatus(500);
+              } else {
+              
+             
+                res.status(200).json({ message: "login", token, username: user.username });
+              }
+            }
+          );
+        } else {
+          res.status(401).json({ message: "Email atau password salah" });
+        }
+      }
+    }
+  });
+});
+
+
+app.post("/get-username", (req, res) => {
+  const { email } = req.body;
+
+  const getUserQuery = "SELECT username FROM auth WHERE email = ?";
+  db.query(getUserQuery, [email], (error, results) => {
+    if (error) {
+      console.error(error);
+      res.sendStatus(500);
+    } else {
+      if (results.length === 0) {
+        res.status(404).json({ message: "User not found" });
+      } else {
+        const username = results[0].username;
+        res.status(200).json({ username });
+      }
+    }
+  });
+});
+
+
+app.post("/register", (req, res) => {
+  const { username, password, email } = req.body;
+
+  const uid = generateUID();
+
+  const insertUserQuery =
+    "INSERT INTO auth (uid, username, email, password) VALUES (?, ?, ?, ?)";
+  db.query(
+    insertUserQuery,
+    [uid, username, email, password],
+    (error, results) => {
+      if (error) {
+        console.error("Error saat mendaftarkan pengguna:", error);
+        res.sendStatus(500);
+      } else {
+        console.log("Pengguna berhasil terdaftar");
+        res.sendStatus(200);
+      }
+    }
+  );
+});
+
+app.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: "putrabahari1006@gmail.com",
+      pass: "taletpsmoesjdjfq",
+    },
+  });
+
+  const generateResetToken = () => {
+    const token = crypto.randomBytes(3).toString("hex");
+    return token;
+  };
+
+  try {
+    const resetToken = generateResetToken();
+    console.log(resetToken);
+
+    const insertTokenQuery = `UPDATE auth SET otp = ? WHERE email = ?`;
+    const insertTokenValues = [resetToken, email];
+
+    const mailOptions = {
+      from: "omYoo@Studio.com",
+      to: email,
+      subject: "Reset Password",
+      text: `Halo,
+    
+    Anda telah meminta untuk mereset password Anda. Gunakan token berikut untuk mereset password:
+    
+    Token: 
+    ${resetToken}
+    
+    Jika Anda tidak melakukan permintaan ini, silakan abaikan email ini.
+    
+    Salam,
+    Terima Kasih`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    db.query(insertTokenQuery, insertTokenValues, (error, results) => {
+      if (error) {
+        console.error(error);
+        res.sendStatus(500);
+      } else {
+        res.sendStatus(200);
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
+});
+
+app.delete("/delete-token", (req, res) => {
+  const { email } = req.body;
+  const deleteTokenQuery = `UPDATE auth SET otp = NULL WHERE email = ?`;
+  const deleteTokenValues = [email];
+
+  db.query(deleteTokenQuery, deleteTokenValues, (error, results) => {
+    if (error) {
+      console.error("Error deleting token:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    } else {
+      console.log("Token deleted successfully");
+      res.sendStatus(200);
+    }
+  });
+});
+
+app.post("/verify-token", (req, res) => {
+  const { otp, email } = req.body;
+  const selectOTPQuery = "SELECT otp FROM auth WHERE email = ?";
+
+  db.query(selectOTPQuery, [email], (selectError, selectResults) => {
+    if (selectError) {
+      console.error(selectError);
+      res.sendStatus(500);
+    } else {
+      if (selectResults.length > 0) {
+        const storedOTP = selectResults[0].otp;
+
+        if (storedOTP === otp) {
+          res.sendStatus(200);
+        } else {
+          console.log(otp);
+          res.sendStatus(400);
+        }
+      } else {
+        console.log("Email not found");
+        res.sendStatus(400);
+      }
+    }
+  });
+});
+
+app.post("/update-password", (req, res) => {
+  const { email, newPassword } = req.body;
+  const updatePasswordQuery = "UPDATE auth SET password = ? WHERE email = ?";
+  const updatePasswordValues = [newPassword, email];
+
+  db.query(updatePasswordQuery, updatePasswordValues, (error, results) => {
+    if (error) {
+      console.error("Error updating password:", error);
+      res.sendStatus(500);
+    } else {
+      console.log("Password updated successfully");
+      res.sendStatus(200);
+    }
+  });
+});
+
+app.post("/check-email", (req, res) => {
+  const { email } = req.body;
+
+  const sql = "SELECT * FROM auth WHERE email = ?";
+  db.query(sql, [email], (err, result) => {
+    if (err) {
+      console.error(err);
+      res.status(500).json({ error: "Internal Server Error" });
+      return;
+    }
+
+    if (result.length > 0) {
+      res.status(200).json({ exists: true });
+    } else {
+      res.status(200).json({ exists: false });
+    }
+  });
 });
 
 app.listen(port, () => {

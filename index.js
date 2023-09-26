@@ -34,8 +34,6 @@ app.get("/orders", (req, res) => {
   });
 });
 
-
-
 app.post("/order", async (req, res) => {
   const {
     id_product,
@@ -61,9 +59,10 @@ app.post("/order", async (req, res) => {
     !time
   ) {
     console.log("Please fill in all fields");
+
     return res.status(400).json({ error: "Please fill in all fields" });
   }
-
+  console.log(price);
   const requestedOrderTime = new Date(`${date}T${time}`).getTime();
 
   const findPreviousOrderQuery =
@@ -119,17 +118,12 @@ app.post("/order", async (req, res) => {
       email: email,
     };
 
-    const enabledPayments = ["credit_card", "cimb_clicks", "bca_klikbca"];
-
-    const creditCardOptions = {
-      save_card: false,
-      secure: false,
-    };
-
     const transaction = {
       transaction_details: transactionDetails,
-      enabled_payments: enabledPayments,
-      credit_card: creditCardOptions,
+      customer_details: {
+        email: email,
+        first_name: name,
+      },
     };
 
     try {
@@ -138,17 +132,34 @@ app.post("/order", async (req, res) => {
       console.log("Payment token:", paymentToken);
 
       const paymentData = {
-        payment_type: "gopay",
         transaction_details: transactionDetails,
         customer_details: {
           email: email,
+          first_name: name,
         },
-          item_details: {
-          id: id_product,
-          price: price,
+        seller_details: {
+          id: "sellerId-01",
+          name: "Ario Novrian",
+          email: "omyoo@studio.com",
+          url: "https://www.omyoo-studio.online/",
+          address: {
+            first_name: "Ario",
+            last_name: "Novrian",
+            phone: "089680768061",
+            address: "Jl Karya Tani",
+            city: "Ketapang",
+            postal_code: "78813",
+            country_code: "IDN",
+          },
+        },
 
-          name: nm_product,
-        },
+        item_details: [
+          {
+            price: price,
+            quantity: 1,
+            name: nm_product,
+          },
+        ],
       };
 
       const paymentResponse = await snap.createTransaction(paymentData);
@@ -293,9 +304,9 @@ app.post("/login", (req, res) => {
                 console.error(insertError);
                 res.sendStatus(500);
               } else {
-              
-             
-                res.status(200).json({ message: "login", token, username: user.username });
+                res
+                  .status(200)
+                  .json({ message: "login", token, username: user.username });
               }
             }
           );
@@ -306,7 +317,6 @@ app.post("/login", (req, res) => {
     }
   });
 });
-
 
 app.post("/get-username", (req, res) => {
   const { email } = req.body;
@@ -326,7 +336,6 @@ app.post("/get-username", (req, res) => {
     }
   });
 });
-
 
 app.post("/register", (req, res) => {
   const { username, password, email } = req.body;
@@ -373,65 +382,64 @@ app.post("/forgot-password", async (req, res) => {
     const insertTokenValues = [resetToken, email];
 
     const mailOptions = {
-  from: "omYoo@Studio.com",
-  to: email,
-  subject: "Reset Password",
-  html: `
-    <html>
-      <head>
-        <style>
-          /* Tambahkan CSS kustom Anda di sini */
-          body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            margin: 0;
-            padding: 0;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #ffffff;
-          }
-          .header {
-            background-color: #616161;
-            color: #ffffff;
-            padding: 10px 0;
-            text-align: center;
-          }
-          .content {
-            padding: 20px;
-          }
-          .footer {
-            background-color: #616161;
-            color: #ffffff;
-            padding: 10px 0;
-            text-align: center;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Reset Password</h1>
-          </div>
-          <div class="content">
-            <p>Halo,</p>
-            <p>Anda telah meminta untuk mereset password Anda. Gunakan token berikut untuk mereset password:</p>
-            <p><strong>Token:</strong> ${resetToken}</p>
-            <p>Jika Anda tidak melakukan permintaan ini, silakan abaikan email ini.</p>
-            <p>Salam,</p>
-            <p>Terima Kasih</p>
-          </div>
-          <div class="footer">
-            &copy; ${new Date().getFullYear()} omYoo Studio
-          </div>
-        </div>
-      </body>
-    </html>
-  `,
-};
-
+      from: "omYoo@Studio.com",
+      to: email,
+      subject: "Reset Password",
+      html: `
+        <html>
+          <head>
+            <style>
+              /* Tambahkan CSS kustom Anda di sini */
+              body {
+                font-family: Arial, sans-serif;
+                background-color: #f0f0f0;
+                margin: 0;
+                padding: 0;
+              }
+              .container {
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #ffffff;
+              }
+              .header {
+                background-color: #007BFF;
+                color: #ffffff;
+                padding: 10px 0;
+                text-align: center;
+              }
+              .content {
+                padding: 20px;
+              }
+              .footer {
+                background-color: #007BFF;
+                color: #ffffff;
+                padding: 10px 0;
+                text-align: center;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Reset Password</h1>
+              </div>
+              <div class="content">
+                <p>Halo,</p>
+                <p>Anda telah meminta untuk mereset password Anda. Gunakan token berikut untuk mereset password:</p>
+                <p><strong>Token:</strong> ${resetToken}</p>
+                <p>Jika Anda tidak melakukan permintaan ini, silakan abaikan email ini.</p>
+                <p>Salam,</p>
+                <p>Terima Kasih</p>
+              </div>
+              <div class="footer">
+                &copy; ${new Date().getFullYear()} omYoo Studio
+              </div>
+            </div>
+          </body>
+        </html>
+      `,
+    };
 
     await transporter.sendMail(mailOptions);
 

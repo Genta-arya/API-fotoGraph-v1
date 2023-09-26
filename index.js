@@ -143,6 +143,12 @@ app.post("/order", async (req, res) => {
         customer_details: {
           email: email,
         },
+          item_details: {
+          id: id_product,
+          price: price,
+
+          name: nm_product,
+        },
       };
 
       const paymentResponse = await snap.createTransaction(paymentData);

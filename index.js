@@ -388,7 +388,7 @@ app.post("/forgot-password", async (req, res) => {
             background-color: #ffffff;
           }
           .header {
-            background-color: #007BFF;
+            background-color: #616161;
             color: #ffffff;
             padding: 10px 0;
             text-align: center;
@@ -397,7 +397,7 @@ app.post("/forgot-password", async (req, res) => {
             padding: 20px;
           }
           .footer {
-            background-color: #007BFF;
+            background-color: #616161;
             color: #ffffff;
             padding: 10px 0;
             text-align: center;

@@ -367,21 +367,65 @@ app.post("/forgot-password", async (req, res) => {
     const insertTokenValues = [resetToken, email];
 
     const mailOptions = {
-      from: "omYoo@Studio.com",
-      to: email,
-      subject: "Reset Password",
-      text: `Halo,
-    
-    Anda telah meminta untuk mereset password Anda. Gunakan token berikut untuk mereset password:
-    
-    Token: 
-    ${resetToken}
-    
-    Jika Anda tidak melakukan permintaan ini, silakan abaikan email ini.
-    
-    Salam,
-    Terima Kasih`,
-    };
+  from: "omYoo@Studio.com",
+  to: email,
+  subject: "Reset Password",
+  html: `
+    <html>
+      <head>
+        <style>
+          /* Tambahkan CSS kustom Anda di sini */
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+          }
+          .header {
+            background-color: #007BFF;
+            color: #ffffff;
+            padding: 10px 0;
+            text-align: center;
+          }
+          .content {
+            padding: 20px;
+          }
+          .footer {
+            background-color: #007BFF;
+            color: #ffffff;
+            padding: 10px 0;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Reset Password</h1>
+          </div>
+          <div class="content">
+            <p>Halo,</p>
+            <p>Anda telah meminta untuk mereset password Anda. Gunakan token berikut untuk mereset password:</p>
+            <p><strong>Token:</strong> ${resetToken}</p>
+            <p>Jika Anda tidak melakukan permintaan ini, silakan abaikan email ini.</p>
+            <p>Salam,</p>
+            <p>Terima Kasih</p>
+          </div>
+          <div class="footer">
+            &copy; ${new Date().getFullYear()} omYoo Studio
+          </div>
+        </div>
+      </body>
+    </html>
+  `,
+};
+
 
     await transporter.sendMail(mailOptions);
 

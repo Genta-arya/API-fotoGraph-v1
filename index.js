@@ -22,7 +22,19 @@ function generateUID() {
   return uid;
 }
 
-app.get("/orders", (req, res) => {
+function authenticate(req, res, next) {
+ 
+  const authToken = req.headers.authorization;
+
+  if (authToken && authToken === 'Bearer OmyooData') {
+    next(); 
+  } else {
+    res.status(401).json({ status: '401' , message: "Tidak dapat mengakses data anda tidak memiliki Authorization"});
+  }
+}
+
+
+app.get("/orders", authenticate, (req, res) => {
   const getUsersQuery = "SELECT * FROM orders";
   db.query(getUsersQuery, (error, results) => {
     if (error) {
